@@ -9,6 +9,7 @@ import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch'
 import * as route53 from 'aws-cdk-lib/aws-route53'
 import * as acm from 'aws-cdk-lib/aws-certificatemanager'
 import * as targets from 'aws-cdk-lib/aws-route53-targets'
+import * as s3 from 'aws-cdk-lib/aws-s3'
 import { Construct } from 'constructs'
 
 export interface SharedInfrastructureStackProps extends cdk.StackProps {
@@ -26,6 +27,8 @@ export class SharedInfrastructureStack extends cdk.Stack {
   public readonly serviceRole: iam.Role
   public readonly hostedZone: route53.HostedZone
   public readonly certificate: acm.Certificate
+  public readonly sharedDataBucket: s3.Bucket
+  public readonly sharedDataBucketRole: iam.Role
 
   constructor(
     scope: Construct,
@@ -194,6 +197,40 @@ export class SharedInfrastructureStack extends cdk.Stack {
       })
     )
 
+    // Create S3 bucket for shared data
+    this.sharedDataBucket = new s3.Bucket(this, 'SharedDataBucket', {
+      bucketName: `${appName}-${environment}-shared-data`,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      versioned: true,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      lifecycleRules: [
+        {
+          enabled: true,
+          noncurrentVersionExpiration: cdk.Duration.days(30)
+        }
+      ]
+    })
+
+    // Create IAM role for services to access the shared data bucket
+    this.sharedDataBucketRole = new iam.Role(this, 'SharedDataBucketRole', {
+      roleName: `${appName}-${environment}-shared-data-role`,
+      assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
+      description: 'Role for services to access shared data bucket'
+    })
+
+    // Add policy to allow read access to the bucket
+    this.sharedDataBucketRole.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ['s3:GetObject', 's3:ListBucket'],
+        resources: [
+          this.sharedDataBucket.bucketArn,
+          `${this.sharedDataBucket.bucketArn}/*`
+        ]
+      })
+    )
+
     // Output important values
     new cdk.CfnOutput(this, 'VpcId', {
       value: this.vpc.vpcId,
@@ -247,6 +284,19 @@ export class SharedInfrastructureStack extends cdk.Stack {
       value: this.certificate.certificateArn,
       description: 'ACM Certificate ARN',
       exportName: `${appName}-${environment}-certificate-arn`
+    })
+
+    // Add new outputs for the shared data bucket
+    new cdk.CfnOutput(this, 'SharedDataBucketName', {
+      value: this.sharedDataBucket.bucketName,
+      description: 'Shared Data Bucket Name',
+      exportName: `${appName}-${environment}-shared-data-bucket-name`
+    })
+
+    new cdk.CfnOutput(this, 'SharedDataBucketRoleArn', {
+      value: this.sharedDataBucketRole.roleArn,
+      description: 'Shared Data Bucket Role ARN',
+      exportName: `${appName}-${environment}-shared-data-role-arn`
     })
   }
 }
