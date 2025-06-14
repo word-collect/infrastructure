@@ -1,0 +1,38 @@
+{
+  "name": "infrastructure",
+  "version": "1.0.0",
+  "description": "Shared infrastructure for word-collect microservices",
+  "main": "lib/shared-infrastructure-stack.js",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "test": "jest",
+    "cdk": "cdk",
+    "deploy": "cdk deploy",
+    "destroy": "cdk destroy",
+    "synth": "cdk synth"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/word-collect/infrastructure.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/word-collect/infrastructure/issues"
+  },
+  "homepage": "https://github.com/word-collect/infrastructure#readme",
+  "devDependencies": {
+    "@types/jest": "^29.5.5",
+    "@types/node": "^20.7.1",
+    "aws-cdk": "^2.99.1",
+    "aws-cdk-lib": "^2.99.1",
+    "constructs": "^10.2.70",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.1",
+    "ts-node": "^10.9.1",
+    "typescript": "~5.2.2"
+  }
+}
