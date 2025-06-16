@@ -231,11 +231,85 @@ export class SharedInfrastructureStack extends cdk.Stack {
       })
     )
 
+    // Import existing OIDC provider for GitHub Actions
+    const githubOidcProvider =
+      iam.OpenIdConnectProvider.fromOpenIdConnectProviderArn(
+        this,
+        'GitHubOidcProvider',
+        `arn:aws:iam::${this.account}:oidc-provider/token.actions.githubusercontent.com`
+      )
+
+    // Create IAM role for GitHub Actions
+    const githubActionsRole = new iam.Role(this, 'GitHubActionsRole', {
+      roleName: `${appName}-${environment}-github-actions-role`,
+      assumedBy: new iam.WebIdentityPrincipal(
+        githubOidcProvider.openIdConnectProviderArn,
+        {
+          StringEquals: {
+            'token.actions.githubusercontent.com:aud': 'sts.amazonaws.com'
+          },
+          StringLike: {
+            'token.actions.githubusercontent.com:sub': 'repo:word-collect/*:*'
+          }
+        }
+      ),
+      description: 'Role for GitHub Actions to deploy dictionary service'
+    })
+
+    // Add policy to allow reading CDK bootstrap version
+    githubActionsRole.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ['ssm:GetParameter'],
+        resources: [
+          `arn:aws:ssm:${this.region}:${this.account}:parameter/cdk-bootstrap/*`
+        ]
+      })
+    )
+
+    // Add policy to allow CDK deployment
+    githubActionsRole.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'cloudformation:*',
+          'ec2:*',
+          'ecs:*',
+          'elasticloadbalancing:*',
+          'iam:*',
+          'logs:*',
+          's3:*',
+          'secretsmanager:*',
+          'ssm:*'
+        ],
+        resources: ['*']
+      })
+    )
+
     // Output important values
     new cdk.CfnOutput(this, 'VpcId', {
       value: this.vpc.vpcId,
       description: 'VPC ID',
       exportName: `${appName}-${environment}-vpc-id`
+    })
+
+    // Add VPC subnet exports
+    new cdk.CfnOutput(this, 'VpcAzs', {
+      value: this.vpc.availabilityZones.join(','),
+      description: 'VPC Availability Zones',
+      exportName: `${appName}-${environment}-vpc-azs`
+    })
+
+    new cdk.CfnOutput(this, 'VpcPrivateSubnets', {
+      value: this.vpc.privateSubnets.map((subnet) => subnet.subnetId).join(','),
+      description: 'VPC Private Subnet IDs',
+      exportName: `${appName}-${environment}-vpc-private-subnets`
+    })
+
+    new cdk.CfnOutput(this, 'VpcPublicSubnets', {
+      value: this.vpc.publicSubnets.map((subnet) => subnet.subnetId).join(','),
+      description: 'VPC Public Subnet IDs',
+      exportName: `${appName}-${environment}-vpc-public-subnets`
     })
 
     new cdk.CfnOutput(this, 'EventBusName', {
@@ -297,6 +371,13 @@ export class SharedInfrastructureStack extends cdk.Stack {
       value: this.sharedDataBucketRole.roleArn,
       description: 'Shared Data Bucket Role ARN',
       exportName: `${appName}-${environment}-shared-data-role-arn`
+    })
+
+    // Output the role ARN
+    new cdk.CfnOutput(this, 'GitHubActionsRoleArn', {
+      value: githubActionsRole.roleArn,
+      description: 'GitHub Actions Role ARN',
+      exportName: `${appName}-${environment}-github-actions-role-arn`
     })
   }
 }
