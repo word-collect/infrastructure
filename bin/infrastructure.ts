@@ -9,12 +9,16 @@ const app = new cdk.App()
 const env = app.node.tryGetContext('environment') || 'dev'
 const appName = 'word-collect'
 
-new SharedInfrastructureStack(app, `${appName}-${env}-shared-infra`, {
-  env: {
-    account: process.env.CDK_DEFAULT_ACCOUNT,
-    region: process.env.CDK_DEFAULT_REGION || 'us-east-1'
-  },
-  appName,
-  environment: env,
-  description: `Shared infrastructure for ${appName} ${env} environment`
-})
+const sharedInfra = new SharedInfrastructureStack(
+  app,
+  `${appName}-${env}-shared-infra`,
+  {
+    env: {
+      account: process.env.CDK_DEFAULT_ACCOUNT,
+      region: process.env.CDK_DEFAULT_REGION || 'us-east-1'
+    },
+    appName,
+    environment: env,
+    description: `Shared infrastructure for ${appName} ${env} environment`
+  }
+)

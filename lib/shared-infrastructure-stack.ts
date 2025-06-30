@@ -4,6 +4,7 @@ import * as events from 'aws-cdk-lib/aws-events'
 import * as logs from 'aws-cdk-lib/aws-logs'
 import * as iam from 'aws-cdk-lib/aws-iam'
 import * as ecs from 'aws-cdk-lib/aws-ecs'
+import * as apigateway from 'aws-cdk-lib/aws-apigateway'
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2'
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch'
 import * as route53 from 'aws-cdk-lib/aws-route53'
@@ -23,6 +24,7 @@ export class SharedInfrastructureStack extends cdk.Stack {
   public readonly sharedLogGroup: logs.LogGroup
   public readonly ecsCluster: ecs.Cluster
   public readonly loadBalancer: elbv2.ApplicationLoadBalancer
+  public readonly apiGateway: apigateway.RestApi
   public readonly taskExecutionRole: iam.Role
   public readonly serviceRole: iam.Role
   public readonly hostedZone: route53.HostedZone
@@ -275,6 +277,8 @@ export class SharedInfrastructureStack extends cdk.Stack {
           'cloudformation:*',
           'ec2:*',
           'ecs:*',
+          'ecr:*',
+          'route53:*',
           'elasticloadbalancing:*',
           'iam:*',
           'logs:*',
@@ -336,6 +340,18 @@ export class SharedInfrastructureStack extends cdk.Stack {
       exportName: `${appName}-${environment}-alb-dns`
     })
 
+    new cdk.CfnOutput(this, 'LoadBalancerARN', {
+      value: this.loadBalancer.loadBalancerArn,
+      description: 'Load Balancer ARN',
+      exportName: `${appName}-${environment}-alb-arn`
+    })
+
+    new cdk.CfnOutput(this, 'HTTPSListenerARN', {
+      value: httpsListener.listenerArn,
+      description: 'HTTPS Listener ARN',
+      exportName: `${appName}-${environment}-alb-https-listener-arn`
+    })
+
     new cdk.CfnOutput(this, 'TaskExecutionRoleArn', {
       value: this.taskExecutionRole.roleArn,
       description: 'ECS Task Execution Role ARN',
@@ -379,5 +395,7 @@ export class SharedInfrastructureStack extends cdk.Stack {
       description: 'GitHub Actions Role ARN',
       exportName: `${appName}-${environment}-github-actions-role-arn`
     })
+
+    cdk.Tags.of(this.loadBalancer).add('Name', `${appName}-${environment}-alb`)
   }
 }
