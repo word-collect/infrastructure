@@ -284,7 +284,12 @@ export class SharedInfrastructureStack extends cdk.Stack {
           'logs:*',
           's3:*',
           'secretsmanager:*',
-          'ssm:*'
+          'ssm:*',
+          'bedrock:*',
+          'bedrock-runtime:*',
+          'stepfunctions:*',
+          'events:*',
+          'dynamodb:*'
         ],
         resources: ['*']
       })
